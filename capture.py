@@ -10,6 +10,7 @@ def handle_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--url', help='url')
     parser.add_argument('-f', '--full-screenshot', action='store_true', help='enable to take a full screenshot')
+    parser.add_argument('-l', '--location', default=False, help='enable to change saving location')
 
     return parser.parse_args()
 
@@ -37,18 +38,19 @@ def format_screenshot_name(url):
 
 def main():
     args = handle_arguments()
+    
+    location = 'screenshots' if not args.location else args.location
+    if not os.path.isdir(location):
+        os.makedirs(location)
 
     url = args.url
     driver = start_selenium_driver(url)
-
-    if not os.path.isdir('screenshots'):
-        os.makedirs('screenshots')
 
     if args.full_screenshot:
         set_full_screen(driver)
 
     driver.find_element_by_tag_name('body')\
-        .screenshot('screenshots/{}.png'.format(format_screenshot_name(url)))
+        .screenshot('{}/{}.png'.format(location, format_screenshot_name(url)))
 
 
 if __name__ == '__main__':
