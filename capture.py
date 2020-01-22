@@ -1,4 +1,3 @@
-import sys
 import os
 from datetime import datetime
 from urllib.parse import urlparse
@@ -10,6 +9,7 @@ from selenium import webdriver
 def handle_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--url', help='url')
+    parser.add_argument('-f', '--full-screenshot', action='store_true', help='enable to take a full screenshot')
 
     return parser.parse_args()
 
@@ -22,6 +22,12 @@ def start_selenium_driver(url):
     driver.get(url)
 
     return driver
+
+
+def set_full_screen(driver):
+    total_width = driver.execute_script('return screen.width')
+    total_height = driver.execute_script('return document.body.scrollHeight')
+    driver.set_window_size(total_width, total_height)
 
 
 def format_screenshot_name(url):
@@ -37,6 +43,9 @@ def main():
 
     if not os.path.isdir('screenshots'):
         os.makedirs('screenshots')
+
+    if args.full_screenshot:
+        set_full_screen(driver)
 
     driver.find_element_by_tag_name('body')\
         .screenshot('screenshots/{}.png'.format(format_screenshot_name(url)))
