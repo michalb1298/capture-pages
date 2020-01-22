@@ -2,7 +2,16 @@ import sys
 import os
 from datetime import datetime
 from urllib.parse import urlparse
+
+import argparse
 from selenium import webdriver
+
+
+def handle_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', '--url', help='url')
+
+    return parser.parse_args()
 
 
 def start_selenium_driver(url):
@@ -21,18 +30,16 @@ def format_screenshot_name(url):
 
 
 def main():
-    if len(sys.argv) == 1:
-        print("usage: capture.py <url>")
+    args = handle_arguments()
 
-    else:
-        url = sys.argv[1]
-        driver = start_selenium_driver(url)
+    url = args.url
+    driver = start_selenium_driver(url)
 
-        if not os.path.isdir("screenshots"):
-            os.makedirs("screenshots")
+    if not os.path.isdir('screenshots'):
+        os.makedirs('screenshots')
 
-        driver.find_element_by_tag_name('body')\
-            .screenshot('screenshots/{}.png'.format(format_screenshot_name(url)))
+    driver.find_element_by_tag_name('body')\
+        .screenshot('screenshots/{}.png'.format(format_screenshot_name(url)))
 
 
 if __name__ == '__main__':
