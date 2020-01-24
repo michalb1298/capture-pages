@@ -38,7 +38,7 @@ def format_screenshot_name(url):
 
 def main():
     args = handle_arguments()
-    
+
     location = 'screenshots' if not args.location else args.location
     if not os.path.isdir(location):
         os.makedirs(location)
@@ -51,6 +51,8 @@ def main():
 
     driver.find_element_by_tag_name('body')\
         .screenshot('{}/{}.png'.format(location, format_screenshot_name(url)))
+
+    driver.quit()
 
 
 if __name__ == '__main__':
