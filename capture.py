@@ -1,12 +1,14 @@
+import argparse
+import configparser
+import logging
 import os
+import sys
 from datetime import datetime
 from urllib.parse import urlparse
-import configparser
-import argparse
-import boto3
-import logging
-from botocore.exceptions import ClientError
-from selenium import webdriver
+
+from boto3.exceptions import S3UploadFailedError
+
+from capturepages import capture_web_page, upload_file_to_s3
 
 logger = logging.getLogger('capture_pages')
 
@@ -21,12 +23,14 @@ def init_logger():
     logger.addHandler(ch)
 
 
-def handle_arguments():
+def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--url', help='url')
-    parser.add_argument('-f', '--full-screenshot', action='store_true', help='enable to take a full screenshot')
-    parser.add_argument('-l', '--location', default=False, help='enable to change saving location')
-    parser.add_argument('-s3', '--s3', action='store_true', default=False, help='enable to save to s3')
+    parser.add_argument('-f', '--full-screenshot', action='store_true', help='take a full screenshot')
+    parser.add_argument('-l', '--location', default='screenshots',
+                        help='path to save screenshot into. default: screenshots')
+    parser.add_argument('-s3', '--s3', action='store_true', default=False,
+                        help='save to s3. requires configuration file')
 
     return parser.parse_args()
 
@@ -37,81 +41,51 @@ def load_config():
     return config
 
 
-def start_selenium_driver(url):
-    logger.info('Creating Selenium web driver...')
-    options = webdriver.ChromeOptions()
-    options.headless = True
-
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
-    return driver
-
-
-def set_full_screen(driver):
-    total_width = driver.execute_script('return screen.width')
-    total_height = driver.execute_script('return document.body.scrollHeight')
-    driver.set_window_size(total_width, total_height)
-
-
-def format_screenshot_name(url):
+def format_screenshot_name(url, extension='png'):
     website_name = urlparse(url).netloc.split('.')[0]
-    return website_name + datetime.now().strftime('%m%d%y%H%M%S')
+    date_string = datetime.now().strftime('%m%d%y%H%M%S')
+    return f'{website_name}{date_string}.{extension}'
 
 
-def upload_to_s3(file_name, bucket, aws_access_key_id, aws_secret_access_key):
-    logger.info('Trying to connect to S3...')
-    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-
-    object_name = os.path.basename(file_name)
-    s3_client.upload_file(file_name, bucket, object_name)
-    logger.info('Uploaded to S3 successfully.')
+def get_aws_config():
+    config = load_config()
+    if 'AWS' not in config:
+        logger.fatal('No AWS section found in config file.')
+    aws_config = config['AWS']
+    if 'Bucket' not in aws_config or 'AWSAccessKeyId' not in aws_config or 'AWSSecretAccessKey' not in aws_config:
+        logger.fatal('No AWS parameters found in config file.')
+    return aws_config['Bucket'], aws_config['AWSAccessKeyId'], aws_config['AWSSecretAccessKey']
 
 
 def main():
     init_logger()
-    args = handle_arguments()
+    args = parse_arguments()
 
-    location = 'screenshots' if not args.location else args.location
-    if not os.path.isdir(location):
+    screenshots_directory = args.location
+    if not os.path.isdir(screenshots_directory):
         try:
-            os.makedirs(location)
+            os.mkdir(screenshots_directory)
         except OSError:
-            logger.fatal('', exc_info=True)
+            logger.exception(f'Failed to create screenshots directory: {screenshots_directory}')
+            sys.exit()
 
-    url = args.url
-    driver = None
+    screenshot_file_name = format_screenshot_name(args.url)
+    screenshot_path = os.path.join(screenshots_directory, screenshot_file_name)
     try:
-        driver = start_selenium_driver(url)
+        capture_web_page(args.url, screenshot_path, args.full_screenshot)
     except:
-        logger.fatal('Failed to initialize Selenium web driver.', exc_info=True)
-
-    if args.full_screenshot:
-        set_full_screen(driver)
-
-    screenshot_path = '{}.png'.format(os.path.join(location, format_screenshot_name(url)))
-
-    logger.info('Taking a screenshot.')
-    driver.find_element_by_tag_name('body') \
-        .screenshot(screenshot_path)
-    logger.info('Saved screenshot to \'{}\'.'.format(screenshot_path))
+        logger.exception('Couldn\'t capture web page.')
+        sys.exit()
 
     if args.s3:
-        config = load_config()
-        if 'AWS' not in config:
-            logger.fatal('No AWS section found in config file.')
-
-        aws_config = config['AWS']
-
-        if 'Bucket' not in aws_config or 'AWSAccessKeyId' not in aws_config or 'AWSSecretAccessKey' not in aws_config:
-            logger.fatal('No AWS parameters found in config file.')
+        bucket, aws_access_key_id, aws_secret_access_key = get_aws_config()
 
         try:
-            upload_to_s3(screenshot_path, aws_config['Bucket'], aws_config['AWSAccessKeyId'],
-                         aws_config['AWSSecretAccessKey'])
-        except ClientError:
+            upload_file_to_s3(screenshot_path, screenshot_file_name, bucket, aws_access_key_id,
+                              aws_secret_access_key)
+        except S3UploadFailedError:
             logger.exception('Failed to upload file to S3.')
 
-    driver.quit()
     logger.info('Done!')
 
 
