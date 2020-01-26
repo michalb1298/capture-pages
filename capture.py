@@ -30,7 +30,7 @@ def parse_arguments():
     parser.add_argument('-f', '--full-screenshot', action='store_true', help='take a full screenshot')
     parser.add_argument('-l', '--location', default='screenshots',
                         help='path to save screenshot, default: screenshots')
-    parser.add_argument('-s3', '--s3', action='store_true', default=False,
+    parser.add_argument('-s3', action='store_true', default=False,
                         help='save to s3, requires configuration file')
 
     return parser.parse_args()
