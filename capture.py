@@ -5,10 +5,13 @@ import os
 import sys
 from datetime import datetime
 from urllib.parse import urlparse
-from boto3.exceptions import S3UploadFailedError
+from boto3.exceptions import Boto3Error
+from botocore.exceptions import BotoCoreError
+from selenium.common.exceptions import WebDriverException
+
 from capturepages import capture_web_page, upload_file_to_s3
 
-logger = logging.getLogger('capture_pages')
+logger = logging.getLogger('capturepages')
 
 
 def init_logger():
@@ -64,14 +67,14 @@ def main():
         try:
             os.mkdir(screenshots_directory)
         except OSError:
-            logger.exception(f'Failed to create screenshots directory: {screenshots_directory}')
+            logger.exception(f'Failed to create screenshots directory: {screenshots_directory}.')
             sys.exit()
 
     screenshot_file_name = format_screenshot_name(args.url)
     screenshot_path = os.path.join(screenshots_directory, screenshot_file_name)
     try:
         capture_web_page(args.url, screenshot_path, args.full_screenshot)
-    except:
+    except WebDriverException:
         logger.exception('Couldn\'t capture web page.')
         sys.exit()
 
@@ -81,7 +84,7 @@ def main():
         try:
             upload_file_to_s3(screenshot_path, screenshot_file_name, bucket, aws_access_key_id,
                               aws_secret_access_key)
-        except S3UploadFailedError:
+        except (BotoCoreError, Boto3Error):
             logger.exception('Failed to upload file to S3.')
 
     logger.info('Done!')
