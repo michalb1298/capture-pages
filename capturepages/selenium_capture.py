@@ -1,5 +1,5 @@
 import logging
-
+from screeninfo import get_monitors
 from selenium import webdriver
 
 logger = logging.getLogger(__name__)
@@ -11,13 +11,18 @@ def init_selenium_driver():
     options.headless = True
 
     driver = webdriver.Chrome(options=options)
+
+    screen_width = get_monitors()[0].width
+    screen_height = get_monitors()[0].height
+    driver.set_window_size(screen_width, screen_height)
+
     return driver
 
 
 def set_driver_full_screen(driver):
-    total_width = driver.execute_script('return screen.width')
+    screen_width = driver.get_window_size()['width']
     total_height = driver.execute_script('return document.body.scrollHeight')
-    driver.set_window_size(total_width, total_height)
+    driver.set_window_size(screen_width, total_height)
 
 
 def capture_web_page(url, screenshot_path, full_screenshot=False):
