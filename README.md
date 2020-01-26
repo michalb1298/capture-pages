@@ -1,5 +1,5 @@
 # capture-pages 
-`capture-pages` allows you to capture a screenshot of any website and save the image to disk.
+`capture-pages` allows you to capture a screenshot of any website and save the image to disk and S3. This script is supported only in **Python 3**.
 
 ## Prerequisites
 1. First, make sure you have installed **Chrome** browser.
@@ -10,22 +10,22 @@
 ## Running
 To run the script, run the following command:
 ```
-python capture.py <url> [-f] [-l path_to_location] [-s3]
+python capture.py [-f] [-l path_to_location] [-s3] <url>
 ```
 
 ### Taking a Full Screenshot
 If your website page is longer than your screen height, 
 you can take a full screenshot using the flag `-f` or `--full-screenshot`:
 ```
-python capture.py <url> -f
+python capture.py -f <url>
 ```
 
 ### Changing Saving Location
-By default, your screenshots will be saved in `screenshots` directory in your current working path.
+By default, your screenshots will be saved in **`screenshots`** directory in your current working path.
 If you would like to change saving destination use the flag `-l` or `--location` with your desired path.
 For example:
 ```
-python capture.py <url> -l ~/my_cool_screenshots
+python capture.py -l ~/my_cool_screenshots <url>
 ``` 
 
 ### Saving to S3
@@ -39,5 +39,5 @@ Bucket = your bucket name
 
 And run the script as following: 
 ```
-python capture.py <url> -s3
+python capture.py -s3 <url>
 ```
