@@ -12,8 +12,9 @@ def init_selenium_driver():
 
     driver = webdriver.Chrome(options=options)
 
-    screen_width = get_monitors()[0].width
-    screen_height = get_monitors()[0].height
+    screen_dimensions = get_monitors()[0]
+    screen_width = screen_dimensions.width
+    screen_height = screen_dimensions.height
     driver.set_window_size(screen_width, screen_height)
 
     return driver
